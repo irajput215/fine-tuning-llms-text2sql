@@ -109,7 +109,7 @@ def run_train(model: str, epochs: int = 2, rank: int = 16, lr: float = 2e-4,
         Path("data/processed/val.jsonl"),
         Path("data/spider/spider_data/database"),
         epochs, rank, rank * 2, lr, batch_size, max_length, 0, save_dir,
-        val_every_steps=500, max_steps=max_steps or None,
+        val_every_steps=500, max_steps=max_steps,  # 0 = no step cap
     )
     volume.commit()
     best = (save_dir / "best.txt").read_text() if (save_dir / "best.txt").exists() else "?"

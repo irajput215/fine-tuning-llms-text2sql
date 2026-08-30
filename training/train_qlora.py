@@ -128,7 +128,7 @@ def train_qlora(model_id: str, train_path: Path, val_path: Path, db_dir: Path,
         logging_steps=10, save_strategy="steps",
         save_steps=val_every_steps,
         bf16=True, report_to="none", remove_unused_columns=False,
-        gradient_checkpointing=True, max_steps=max_steps,
+        gradient_checkpointing=True, max_steps=max_steps or 0,  # 0 = run to epochs
     )
 
     trainer = Trainer(
