@@ -4,7 +4,9 @@ A resume-grade, end-to-end project: fine-tune **Llama 3.3** on the **Spider**
 text-to-SQL benchmark using **QLoRA**, with a rigorous, fully automatic
 **evaluation harness** that *proves* the fine-tuning actually helped.
 
-> **Status:** scaffolding — project structure, uv environment, and this plan are
+> **Status:** data-prep stage built — Spider staging script (HF examples + schema,
+> chat-template formatting, train/val/test split, optional S3 mirror + schema
+> linking) validated on real data. Training and eval harness are next.
 > in place. Baseline numbers (X%) and fine-tuned results (Y%) are filled in as
 > the pipeline runs.
 
@@ -174,7 +176,8 @@ uv run python -c "import torch, transformers, peft; print('stack OK')"
 
 ## Next steps (checklist)
 
-- [ ] `data_prep/SCOPE.md` — the one-paragraph scope decision
+- [x] `data_prep/SCOPE.md` — the one-paragraph scope decision
+- [x] Spider → S3 staging script + loader (validated on real data)
 - [ ] Spider → S3 staging script + loader
 - [ ] Baseline run (zero-shot + few-shot) → X%
 - [ ] QLoRA training with val checkpointing
