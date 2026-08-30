@@ -45,6 +45,7 @@ flowchart LR
 - **`docs/decisions.md`** — why every choice was made (D1–D7)
 - **`docs/RUNBOOK.md`** — exact commands from checkout to results
 - **`docs/PROBLEMS.md`** — every problem hit + root cause + fix (the debugging saga)
+- **`docs/RESULTS.md`** — baseline results: 60.5% exec accuracy (zero-shot), stratification, next steps
 
 ## Repo structure
 

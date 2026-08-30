@@ -68,3 +68,12 @@ file (P5e), plus the secret-name mismatch (P6) and the vLLM KV-cache OOM
 (P7). All documented in `docs/PROBLEMS.md` with fixes + evidence. State: the
 baseline run reaches generation after the max_model_len cap; volume-based
 repo mount works end to end.
+
+### 08 · First baseline captured — the X%
+Modal run `baseline-zeroshot-200` succeeded end to end (after the P7/P9 fixes):
+**zero-shot Llama 3.1 8B → 60.5% execution accuracy** (n=200, greedy),
+29.0% exact match. Feature stratification: aggregation 68.97%, set-op 53.33%,
+join 45.83%, subquery 37.14%. Difficulty labels pending (HF rows carry none;
+official dev.json via --difficulty-json). Summary saved to the volume and
+copied to `analysis/baseline-zeroshot-200.json`. Documented in
+`docs/RESULTS.md`.

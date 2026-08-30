@@ -74,8 +74,7 @@ def load_generator(model_id: str, quantize_4bit: bool):
         # Our prompts are ~2-4k tokens; 8192 leaves headroom for schema + SQL.
         llm = LLM(model=model_id, tokenizer=model_id, dtype="bfloat16",
                   max_model_len=8192)
-        sp = SamplingParams(temperature=0, max_tokens=300, stop=["<|eot_id|>"],
-                            add_special_tokens=False)
+        sp = SamplingParams(temperature=0, max_tokens=300, stop=["<|eot_id|>"])
         return ("vllm", llm, sp)
     except ImportError:
         import torch
