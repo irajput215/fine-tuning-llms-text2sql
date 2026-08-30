@@ -77,3 +77,11 @@ join 45.83%, subquery 37.14%. Difficulty labels pending (HF rows carry none;
 official dev.json via --difficulty-json). Summary saved to the volume and
 copied to `analysis/baseline-zeroshot-200.json`. Documented in
 `docs/RESULTS.md`.
+
+### 09 · Few-shot baseline — flat exec, better exact-match
+Ran `baseline-fewshot-200` (2 in-context examples): **execution accuracy
+60.0%** (vs 60.5% zero-shot — noise), **exact match 34.5%** (vs 29.0% — up
+5.5). Per-feature: subquery +2.9, join −6.3, aggregation −4.3, set-op flat.
+Interpretation: 2 shots change SQL *style* (better string match) but not
+*correctness*; fine-tuning, not prompting, is the expected lever. Summaries
+saved to the volume + `analysis/`. RESULTS.md updated with the comparison.

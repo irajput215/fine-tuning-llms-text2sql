@@ -21,7 +21,29 @@ write SQL directly from the prompt — no training, no examples (zero-shot):
 meaningless. Every future result (few-shot, fine-tuned) is reported against
 this baseline.
 
-## Metrics (run: `baseline-zeroshot-200`)
+## Metrics (n=200, greedy)
+
+| Metric | Zero-shot | Few-shot (2) | Δ |
+|---|---|---|---|
+| **Execution accuracy** | **60.5%** | **60.0%** | −0.5 (noise) |
+| **Exact match** | 29.0% | 34.5% | **+5.5** |
+| Aggregation | 68.97% | 64.66% | −4.3 |
+| Join | 45.83% | 39.58% | −6.3 |
+| Set-operation | 53.33% | 53.33% | 0 |
+| Subquery | 37.14% | 40.00% | +2.9 |
+
+### Reading the few-shot result (honest)
+
+Two in-context examples **did not improve execution accuracy** (60.0 vs 60.5 —
+inside the noise band for n=200) but **did improve exact match** (+5.5 pts):
+the model's SQL became more *format-similar* to the gold without being more
+*correct*. Per-feature moves are small and inconsistent (subquery up, join
+down — small buckets). Interpretation: at 2 shots, few-shot examples don't
+carry enough schema/join structure to help; the real lever is expected to be
+fine-tuning, not prompting. (Worth revisiting with 3–5 shots or
+schema-matched shots in an ablation.)
+
+
 
 | Metric | Value | Meaning |
 |---|---|---|
@@ -34,7 +56,8 @@ this baseline.
 
 **By difficulty:** pending — the HF mirror's rows carry no difficulty labels;
 supply the official Spider `dev.json` via `--difficulty-json` to stratify by
-easy/medium/hard/extra-hard.
+easy/medium/hard/extra-hard. (Secondary per the run plan — per-feature
+stratification tells the stronger story.)
 
 **Where the model already works:** straightforward aggregations
 (`SELECT count(*) FROM singer`). **Where it struggles:** nested subqueries and
