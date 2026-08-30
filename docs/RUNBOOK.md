@@ -42,7 +42,7 @@ uv run python eval/run_eval.py \
 ## 4. Baseline — zero-shot
 
 ```sh
-modal run modal_app.py baseline \
+modal run modal_app.py::run_baseline \
     --model meta-llama/Llama-3.1-8B-Instruct --max-examples 200
 # small first: validates image build, model download, generation, harness
 ```
@@ -50,27 +50,27 @@ modal run modal_app.py baseline \
 Then the full test set:
 
 ```sh
-modal run modal_app.py baseline \
+modal run modal_app.py::run_baseline \
     --model meta-llama/Llama-3.1-8B-Instruct
 ```
 
 ## 5. Baseline — few-shot (stronger X%)
 
 ```sh
-modal run modal_app.py baseline \
+modal run modal_app.py::run_baseline \
     --model meta-llama/Llama-3.1-8B-Instruct --few-shot 2 --max-examples 200
-modal run modal_app.py baseline \
+modal run modal_app.py::run_baseline \
     --model meta-llama/Llama-3.1-8B-Instruct --few-shot 2
 ```
 
 ## 6. QLoRA fine-tuning
 
 ```sh
-modal run modal_app.py train \
+modal run modal_app.py::run_train \
     --model meta-llama/Llama-3.1-8B-Instruct --epochs 2 --rank 16
 
 # ablation: rank 32, or 3 epochs
-modal run modal_app.py train \
+modal run modal_app.py::run_train \
     --model meta-llama/Llama-3.1-8B-Instruct --epochs 2 --rank 32
 ```
 
