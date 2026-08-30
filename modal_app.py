@@ -37,13 +37,17 @@ IMAGE_DEPS = [
 image = (
     modal.Image.debian_slim(python_version="3.12")
     .pip_install(IMAGE_DEPS)
-    # Code is baked into the IMAGE (immutable per deploy) — the volume's
-    # snapshot semantics served stale code on fresh runs. Data rides along;
-    # outputs/checkpoints still go to the volume.
-    .copy_local_dir(str(REPO / "training"), "/repo/training")
-    .copy_local_dir(str(REPO / "eval"), "/repo/eval")
-    .copy_local_dir(str(REPO / "data_prep"), "/repo/data_prep")
-    .copy_local_dir(str(REPO / "data"), "/repo/data")
+    # Code is baked into the IMAGE (copy=True, immutable per deploy) — the
+    # volume's snapshot semantics served stale code on fresh runs. Data rides
+    # along; outputs/checkpoints still go to the volume.
+    .add_local_dir(str(REPO / "training"), "/repo/training", copy=True,
+                   ignore=["__pycache__"])
+    .add_local_dir(str(REPO / "eval"), "/repo/eval", copy=True,
+                   ignore=["__pycache__"])
+    .add_local_dir(str(REPO / "data_prep"), "/repo/data_prep", copy=True,
+                   ignore=["__pycache__"])
+    .add_local_dir(str(REPO / "data"), "/repo/data", copy=True,
+                   ignore=["__pycache__"])
 )
 app = modal.App("llama33-text2sql", image=image)
 volume = modal.Volume.from_name("llama33-runs", create_if_missing=True)
