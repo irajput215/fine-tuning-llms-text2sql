@@ -121,3 +121,18 @@ error, each fixed by reading the installed package rather than the docs.
 package** (`dir(module)`, `inspect.signature`, grep the source). Every P5
 failure was a doc/release mismatch — the package source was the source of
 truth, and each fix was found there in minutes.
+
+## P9 · FlashInfer JIT needs nvcc (CUDA toolkit missing in the image)
+
+- **Symptom:** after the KV-cache fix, the engine reaches warmup then dies:
+  `RuntimeError: Could not find nvcc and default cuda_home='/usr/local/cuda'
+  doesn't exist` (from `flashinfer/jit/core.py`).
+- **Root cause:** vLLM 0.28 selected **FlashInfer** for top-p/top-k sampling
+  ("Using FlashInfer for top-p & top-k sampling"). FlashInfer JIT-compiles a
+  CUDA kernel at runtime, which requires the CUDA **toolkit** (`nvcc`); the
+  Modal image ships only the CUDA **runtime** (via torch/vLLM wheels).
+- **Fix:** `os.environ["VLLM_USE_FLASHINFER_SAMPLER"] = "0"` before loading
+  vLLM — verified against the vLLM 0.28.0 source (`topk_topp_sampler.py`
+  returns False and falls back to the native sampler when the var is 0).
+- **Evidence:** the env var name confirmed in the installed release's source,
+  not docs (the recurring lesson again).

@@ -63,6 +63,10 @@ def build_prompt(row: dict, few_shot: int, shot_rows: list[dict]) -> str:
 def load_generator(model_id: str, quantize_4bit: bool):
     """vLLM first, transformers fallback."""
     os.environ.setdefault("HF_TOKEN", "")
+    # vLLM 0.28 defaults to FlashInfer sampling, which JIT-compiles a CUDA
+    # kernel at runtime and needs nvcc (absent in this image). Use the native
+    # sampler instead (same results, no toolkit needed).
+    os.environ.setdefault("VLLM_USE_FLASHINFER_SAMPLER", "0")
     try:
         from vllm import LLM, SamplingParams
         # max_model_len must be capped: vLLM sizes the KV cache off the model's

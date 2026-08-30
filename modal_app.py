@@ -36,7 +36,12 @@ IMAGE_DEPS = [
     "mlflow", "scikit-learn",
 ]
 
-image = modal.Image.debian_slim(python_version="3.12").pip_install(IMAGE_DEPS)
+image = (
+    modal.Image.from_registry(
+        "nvidia/cuda:12.4.0-devel-ubuntu22.04", add_python="3.12"
+    )
+    .pip_install(IMAGE_DEPS)
+)
 app = modal.App("llama33-text2sql", image=image)
 volume = modal.Volume.from_name("llama33-runs", create_if_missing=True)
 repo_volume = modal.Volume.from_name("llama33-repo", create_if_missing=True)

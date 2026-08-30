@@ -117,3 +117,4 @@ modal run modal_app.py::run_train \
 | Harness gold-mode < 100% | Database mismatch — verify `--db-dir` points at `spider_data/database` |
 | OOM on A10G | Lower `--batch-size`, or drop `--max-length` to 1536 |
 | vLLM KV-cache OOM (`max seq len 131072`) | Already fixed: `max_model_len=8192` in `run_baseline.py` — cap it, never let vLLM size KV off the model's full 131k |
+| FlashInfer `Could not find nvcc` | Already fixed: `VLLM_USE_FLASHINFER_SAMPLER=0` in `run_baseline.py` — native sampler, no CUDA toolkit needed |
