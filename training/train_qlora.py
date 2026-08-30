@@ -48,10 +48,10 @@ def train_qlora(model_id: str, train_path: Path, val_path: Path, db_dir: Path,
                 val_every_steps: int, max_steps: int | None) -> None:
     import torch
     from datasets import Dataset
-    from peft import LoraConfig, get_peft_model
+    from peft import LoraConfig, PeftModel, get_peft_model
     from transformers import (
         AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig,
-        TrainingArguments, Trainer, DataCollatorForLanguageModeling,
+        TrainingArguments,
     )
     from trl import SFTTrainer, DataCollatorForCompletionOnlyLM
 
@@ -72,6 +72,7 @@ def train_qlora(model_id: str, train_path: Path, val_path: Path, db_dir: Path,
         r=rank, lora_alpha=alpha, target_modules=DEFAULT_TARGET_MODULES,
         lora_dropout=0.05, bias="none", task_type="CAUSAL_LM")
     model = get_peft_model(model, lora)
+    base_model = model.get_base_model()  # for loading checkpoints during selection
     model.print_trainable_parameters()
 
     rows = load_rows(train_path, max_steps)  # NOTE: max_steps used as row cap here
@@ -90,7 +91,7 @@ def train_qlora(model_id: str, train_path: Path, val_path: Path, db_dir: Path,
         learning_rate=lr, lr_scheduler_type="cosine",
         warmup_ratio=0.05, logging_steps=10, save_strategy="steps",
         save_steps=val_every_steps, evaluation_strategy="no",
-        bf16=True, report_to="mlflow", remove_unused_columns=False,
+        bf16=True, report_to="none", remove_unused_columns=False,
     )
 
     trainer = SFTTrainer(
@@ -100,10 +101,18 @@ def train_qlora(model_id: str, train_path: Path, val_path: Path, db_dir: Path,
     )
     trainer.train()
 
-    # Best-checkpoint selection: eval each saved checkpoint on the val sample.
+    # Best-checkpoint selection: load each saved checkpoint and evaluate it on
+    # the val sample (execution accuracy — the goal metric, not val loss).
     best_acc, best_dir = -1.0, None
-    for ckpt in sorted((save_dir).glob("checkpoint-*")):
-        acc = evaluate_checkpoint(model, tokenizer, val_rows, db_dir, few_shot)
+    for ckpt in sorted(save_dir.glob("checkpoint-*")):
+        try:
+            eval_model = PeftModel.from_pretrained(base_model, ckpt)
+            eval_model.eval()
+            acc = evaluate_checkpoint(eval_model, tokenizer, val_rows, db_dir,
+                                      few_shot)
+        except Exception as exc:  # noqa: BLE001
+            print(f"checkpoint {ckpt.name} eval failed: {exc}")
+            continue
         print(f"checkpoint {ckpt.name}: val exec={acc:.2%}")
         if acc > best_acc:
             best_acc, best_dir = acc, ckpt
