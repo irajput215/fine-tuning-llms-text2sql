@@ -39,6 +39,12 @@ flowchart LR
     I --> J[README results table + findings]
 ```
 
+## Documentation
+
+- **`docs/development-log.md`** — what happened, step by step
+- **`docs/decisions.md`** — why every choice was made (D1–D7)
+- **`docs/RUNBOOK.md`** — exact commands from checkout to results
+
 ## Repo structure
 
 ```
