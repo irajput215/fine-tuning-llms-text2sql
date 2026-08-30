@@ -1,29 +1,63 @@
 #!/usr/bin/env python3
 """
-train_qlora.py — QLoRA fine-tuning with TRL SFTTrainer + val checkpointing.
+train_qlora.py — QLoRA fine-tuning with transformers Trainer + val checkpointing.
 
 Environment-agnostic (Modal / RunPod / Colab). Trains on the staged train
-split, saves the checkpoint with the BEST validation execution accuracy
-(reusing the eval harness on a val sample), and logs everything to MLflow.
+split, saves checkpoints, and selects the one with the BEST validation
+execution accuracy (reusing the eval harness on a val sample).
 
-Usage (Modal):  modal run training/modal_app.py train --model ...
+Uses plain `transformers.Trainer` + a small completion-only collator
+(masks everything before the assistant SQL section), avoiding TRL version
+drift (`DataCollatorForCompletionOnlyLM` was removed from recent TRL).
+
+Usage (Modal):  modal run modal_app.py::run_train --model ...
 Usage (bare):   python training/train_qlora.py --model meta-llama/Llama-3.1-8B-Instruct
 """
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from eval.run_eval import (  # noqa: E402
-    execute_sql, execution_accuracy, render_table,
+    execute_sql, execution_accuracy,
 )
-from training.run_baseline import load_rows, build_prompt, generate, load_generator  # noqa: E402
+from training.run_baseline import build_prompt, generate  # noqa: E402
 
 DEFAULT_TARGET_MODULES = ["q_proj", "k_proj", "v_proj", "o_proj"]
+ASSISTANT_MARKER = "<|start_header_id|>assistant<|end_header_id|>\n\n"
+
+
+class CompletionOnlyCollator:
+    """Pad + label only the assistant (SQL) section; prompt tokens -> -100."""
+
+    def __init__(self, tokenizer, max_length: int):
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+        self.marker_ids = tokenizer.encode(ASSISTANT_MARKER, add_special_tokens=False)
+
+    def __call__(self, features):
+        import torch
+
+        input_ids = [f["input_ids"] for f in features]
+        attn = [f["attention_mask"] for f in features]
+        padded = self.tokenizer.pad(
+            {"input_ids": input_ids, "attention_mask": attn}, return_tensors="pt")
+        labels = padded["input_ids"].clone()
+        for i in range(labels.shape[0]):
+            ids = labels[i].tolist()
+            idx = -1
+            for j in range(len(ids) - len(self.marker_ids) + 1):
+                if ids[j:j + len(self.marker_ids)] == self.marker_ids:
+                    idx = j + len(self.marker_ids)
+            if idx >= 0:
+                labels[i][:idx] = -100  # ignore everything before the answer
+            else:
+                labels[i] = -100        # no answer found: ignore the row
+        return {"input_ids": padded["input_ids"], "attention_mask": padded["attention_mask"],
+                "labels": labels}
 
 
 def evaluate_checkpoint(model, tokenizer, val_rows, db_dir, few_shot,
@@ -51,9 +85,8 @@ def train_qlora(model_id: str, train_path: Path, val_path: Path, db_dir: Path,
     from peft import LoraConfig, PeftModel, get_peft_model
     from transformers import (
         AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig,
-        TrainingArguments,
+        TrainingArguments, Trainer,
     )
-    from trl import SFTTrainer, DataCollatorForCompletionOnlyLM
 
     os.environ.setdefault("HF_TOKEN", "")
 
@@ -67,6 +100,7 @@ def train_qlora(model_id: str, train_path: Path, val_path: Path, db_dir: Path,
     model = AutoModelForCausalLM.from_pretrained(
         model_id, quantization_config=bnb,
         torch_dtype=torch.bfloat16, device_map="auto", token=True)
+    model.config.use_cache = False  # required with gradient checkpointing
 
     lora = LoraConfig(
         r=rank, lora_alpha=alpha, target_modules=DEFAULT_TARGET_MODULES,
@@ -75,14 +109,16 @@ def train_qlora(model_id: str, train_path: Path, val_path: Path, db_dir: Path,
     base_model = model.get_base_model()  # for loading checkpoints during selection
     model.print_trainable_parameters()
 
-    rows = load_rows(train_path, max_steps)  # NOTE: max_steps used as row cap here
+    rows = load_rows(train_path, max_steps)
     ds = Dataset.from_list([{"text": r["text"]} for r in rows])
-    val_rows = load_rows(val_path, None)
 
-    # Only supervise the assistant (gold SQL) section of each chat example.
-    response_template = "<|start_header_id|>assistant<|end_header_id|>\n\n"
-    collator = DataCollatorForCompletionOnlyLM(
-        response_template=response_template, tokenizer=tokenizer)
+    def _tokenize(examples):
+        return tokenizer(examples["text"], truncation=True,
+                         max_length=max_length, padding=False)
+
+    tok_ds = ds.map(_tokenize, batched=True, remove_columns=["text"])
+    val_rows = load_rows(val_path, None)
+    collator = CompletionOnlyCollator(tokenizer, max_length)
 
     args = TrainingArguments(
         output_dir=str(save_dir), num_train_epochs=epochs,
@@ -92,12 +128,11 @@ def train_qlora(model_id: str, train_path: Path, val_path: Path, db_dir: Path,
         warmup_ratio=0.05, logging_steps=10, save_strategy="steps",
         save_steps=val_every_steps, evaluation_strategy="no",
         bf16=True, report_to="none", remove_unused_columns=False,
+        gradient_checkpointing=True, max_steps=max_steps,
     )
 
-    trainer = SFTTrainer(
-        model=model, args=args, train_dataset=ds,
-        tokenizer=tokenizer, data_collator=collator,
-        max_seq_length=max_length,
+    trainer = Trainer(
+        model=model, args=args, train_dataset=tok_ds, data_collator=collator,
     )
     trainer.train()
 
@@ -118,6 +153,13 @@ def train_qlora(model_id: str, train_path: Path, val_path: Path, db_dir: Path,
             best_acc, best_dir = acc, ckpt
     print(f"BEST checkpoint: {best_dir} ({best_acc:.2%})")
     (save_dir / "best.txt").write_text(f"{best_dir}\n{best_acc:.4f}\n")
+
+
+def load_rows(path: Path, max_steps: int | None) -> list[dict]:
+    import json
+
+    rows = [json.loads(l) for l in open(path)]
+    return rows[: max_steps] if max_steps else rows
 
 
 def main() -> None:
