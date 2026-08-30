@@ -56,6 +56,7 @@ COMMON = dict(
 
 
 def _repo_setup() -> None:
+    os.environ.setdefault("PYTHONDONTWRITEBYTECODE", "1")  # no stale .pyc on the volume
     # The repo rides on the llama33-repo volume (include_source only mounts
     # this app file in 1.5.5):
     #   modal volume put llama33-repo training /repo/training
