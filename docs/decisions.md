@@ -88,3 +88,18 @@ Timeline in [development-log.md](development-log.md).
 - **Why:** completion-only prevents the model from learning to emit prompts;
   val-exec selection ships the checkpoint that actually answers SQL best and
   guards against overfit checkpoints.
+
+## D8 · Modal SDK 1.5.5 reality: volume for the repo, function-ref CLI
+
+- **Date:** 2026-08-31
+- **Context:** The Modal docs (and most tutorials) show `Mount.from_local_dir`
+  + `mounts=` + `local_entrypoint`. The installed 1.5.5 SDK removed all three
+  (P5a–P5e).
+- **Decision:** carry the repo on a **Modal Volume** (`llama33-repo`) mounted
+  at `/repo`; invoke runs as function references
+  (`modal run modal_app.py::run_baseline --model ...`); cap `max_model_len`
+  for vLLM on 24GB.
+- **Why:** the volume is the supported persistence/mounting primitive in 1.5.5
+  and doubles as the outputs store; function-ref CLI is the documented
+  interface. The SDK moves fast — the installed package source, not the docs,
+  is the source of truth (see PROBLEMS.md's closing lesson).

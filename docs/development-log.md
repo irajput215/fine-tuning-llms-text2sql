@@ -59,3 +59,12 @@ Modal secret (`hf-token`) — never in git.
 ### 06 · Documentation
 Created `docs/development-log.md` (this file), `docs/decisions.md`, and
 `docs/RUNBOOK.md`; README now points to them.
+
+### 07 · Modal integration debugging saga
+Integrated Modal (SDK 1.5.5) and hit a chain of doc/release mismatches,
+each diagnosed from the installed package: Mount moved/removed (P5a–c),
+local_entrypoint CLI flags rejected (P5d), include_source mounts only the app
+file (P5e), plus the secret-name mismatch (P6) and the vLLM KV-cache OOM
+(P7). All documented in `docs/PROBLEMS.md` with fixes + evidence. State: the
+baseline run reaches generation after the max_model_len cap; volume-based
+repo mount works end to end.
