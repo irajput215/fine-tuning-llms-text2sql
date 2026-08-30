@@ -13,7 +13,7 @@ cd ~/llama33-text2sql
 modal token new
 
 # Store the HF token as a Modal secret (never in git)
-modal secret create hf-token HF_TOKEN="hf_..."
+modal secret create huggingface-secret HF_TOKEN="hf_..."   # already done by the captain
 
 # (Optional, local) install the full ML stack
 uv sync

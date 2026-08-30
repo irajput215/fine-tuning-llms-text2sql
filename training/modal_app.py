@@ -3,7 +3,7 @@
 modal_app.py — run the baseline and QLoRA training on Modal.
 
 Prereqs:
-  modal secret create hf-token HF_TOKEN="hf_..."     # once
+  modal secret create huggingface-secret HF_TOKEN="hf_..."  # once (already created)
   modal token new                                     # once (browser login)
 
 Usage:
@@ -48,7 +48,7 @@ COMMON = dict(
     image=image,
     mounts=[mount],
     volumes={"/runs": volume},
-    secrets=[modal.Secret.from_name("hf-token")],
+    secrets=[modal.Secret.from_name("huggingface-secret")],  # captain-created secret (HF_TOKEN key)
     retries=0,
 )
 
