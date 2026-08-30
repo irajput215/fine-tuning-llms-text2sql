@@ -65,8 +65,11 @@ def load_generator(model_id: str, quantize_4bit: bool):
     os.environ.setdefault("HF_TOKEN", "")
     try:
         from vllm import LLM, SamplingParams
-        kwargs = {"dtype": "bfloat16"}
-        llm = LLM(model=model_id, tokenizer=model_id, **kwargs)
+        # max_model_len must be capped: vLLM sizes the KV cache off the model's
+        # 131k max and OOMs on 24GB with 15GB of weights (max len 32544 fits).
+        # Our prompts are ~2-4k tokens; 8192 leaves headroom for schema + SQL.
+        llm = LLM(model=model_id, tokenizer=model_id, dtype="bfloat16",
+                  max_model_len=8192)
         sp = SamplingParams(temperature=0, max_tokens=300, stop=["<|eot_id|>"],
                             add_special_tokens=False)
         return ("vllm", llm, sp)
