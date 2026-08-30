@@ -2,15 +2,16 @@
 """
 modal_app.py — run the baseline and QLoRA training on Modal.
 
-Prereqs:
-  modal secret create huggingface-secret HF_TOKEN="hf_..."  # once (already created)
-  modal token new                                     # once (browser login)
+Prereqs (once):
+  modal token new
+  modal secret create huggingface-secret HF_TOKEN="hf_..."   # captain-created
 
-Usage:
-  modal run training/modal_app.py baseline \
-      --model meta-llama/Llama-3.1-8B-Instruct --max-examples 200 --few-shot 2
-  modal run training/modal_app.py baseline --model meta-llama/Llama-3.1-8B-Instruct
-  modal run training/modal_app.py train \
+Usage (run from the repo root — include_source auto-mounts this directory):
+  modal run modal_app.py baseline \
+      --model meta-llama/Llama-3.1-8B-Instruct --max-examples 200
+  modal run modal_app.py baseline --model meta-llama/Llama-3.1-8B-Instruct
+  modal run modal_app.py baseline --model meta-llama/Llama-3.1-8B-Instruct --few-shot 2
+  modal run modal_app.py train \
       --model meta-llama/Llama-3.1-8B-Instruct --epochs 2 --rank 16
 
 Outputs land on the `llama33-runs` volume (and the returned summary prints).
@@ -25,7 +26,11 @@ from pathlib import Path
 
 import modal
 
-REPO = Path(__file__).resolve().parents[1]
+# NOTE (Modal SDK 1.5.5): local-dir Mount() is removed — the repo is carried
+# by include_source (App default True), which mounts THIS directory (the repo
+# root) at /root/ inside the container. That covers code (training/, eval/,
+# data_prep/) and data (data/processed, data/spider) in one upload.
+REPO = Path(__file__).resolve().parent
 
 IMAGE_DEPS = [
     "torch", "transformers>=4.46", "peft", "bitsandbytes", "trl", "accelerate",
@@ -37,27 +42,25 @@ image = modal.Image.debian_slim(python_version="3.12").pip_install(IMAGE_DEPS)
 app = modal.App("llama33-text2sql", image=image)
 volume = modal.Volume.from_name("llama33-runs", create_if_missing=True)
 
-# Mount the repo (data/spider databases included — the zip excluded to save
-# upload). Read-only at runtime; outputs go to the volume.
-def _mount_condition(path: Path) -> bool:
-    return not (path.name == "spider_databases.zip" or ".git" in path.parts)
-
-mount = modal.Mount.from_local_dir(REPO, remote_path="/repo", condition=_mount_condition)
+SECRET = modal.Secret.from_name("huggingface-secret")  # HF_TOKEN key
 
 COMMON = dict(
     image=image,
-    mounts=[mount],
     volumes={"/runs": volume},
-    secrets=[modal.Secret.from_name("huggingface-secret")],  # captain-created secret (HF_TOKEN key)
+    secrets=[SECRET],
     retries=0,
 )
+
+
+def _repo_setup() -> None:
+    os.chdir("/root")
+    sys.path.insert(0, "/root")
 
 
 @app.function(gpu="A10G", timeout=10800, **COMMON)
 def run_baseline(model: str, max_examples: int | None, few_shot: int,
                  out_name: str) -> dict:
-    os.chdir("/repo")
-    sys.path.insert(0, "/repo")
+    _repo_setup()
     from training.run_baseline import run_baseline
 
     summary = run_baseline(
@@ -67,8 +70,7 @@ def run_baseline(model: str, max_examples: int | None, few_shot: int,
         Path("data/processed/train.jsonl"),
         max_examples, few_shot,
     )
-    path = f"/runs/{out_name}"
-    with open(path, "w") as fh:
+    with open(f"/runs/{out_name}", "w") as fh:
         fh.write(json.dumps(summary, indent=1))
     volume.commit()
     return summary
@@ -77,8 +79,7 @@ def run_baseline(model: str, max_examples: int | None, few_shot: int,
 @app.function(gpu="A10G", timeout=10800, **COMMON)
 def run_train(model: str, epochs: int, rank: int, lr: float, batch_size: int,
               max_length: int, max_steps: int | None, out_name: str) -> dict:
-    os.chdir("/repo")
-    sys.path.insert(0, "/repo")
+    _repo_setup()
     from training.train_qlora import train_qlora
 
     save_dir = Path(f"/runs/checkpoints/{out_name}")
@@ -92,7 +93,7 @@ def run_train(model: str, epochs: int, rank: int, lr: float, batch_size: int,
     )
     volume.commit()
     best = (save_dir / "best.txt").read_text() if (save_dir / "best.txt").exists() else "?"
-    return {"best": best, "checkpoints": save_dir}
+    return {"best": best, "checkpoints": str(save_dir)}
 
 
 @app.local_entrypoint()
