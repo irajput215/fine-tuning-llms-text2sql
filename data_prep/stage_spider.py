@@ -47,7 +47,7 @@ SYSTEM_TEMPLATE = (
 
 # Official Spider databases (Google Drive ID — best-effort; see --fetch-databases)
 SPIDER_DB_ZIP_URL = (
-    "https://drive.google.com/uc?export=download&id=1i4xw2Gsr5o8BTORcNw5lvNir7clvMBoi"
+    "https://drive.google.com/uc?export=download&id=1403EGqzIDoHMdQF4c9Bkyl7dZLZ5Wt6J"  # verified 2026-08-30
 )
 
 EXAMPLES_DATASET = "xlangai/spider"          # question/query pairs (train+validation)
@@ -95,6 +95,8 @@ def format_example(row: dict, schema_map: dict, use_linking: bool) -> dict:
     meta = schema_map.get(row["db_id"], {"schema": "(schema unavailable)", "pk": "", "fk": ""})
     schema = format_schema(meta, row["question"], use_linking)
     system = SYSTEM_TEMPLATE.format(schema=schema)
+    prompt = CHAT_TEMPLATE.format(
+        bos=BOS, system=system, question=row["question"], query="")
     text = CHAT_TEMPLATE.format(
         bos=BOS, system=system, question=row["question"], query=row["query"])
     return {
@@ -102,7 +104,8 @@ def format_example(row: dict, schema_map: dict, use_linking: bool) -> dict:
         "question": row["question"],
         "query": row["query"],
         "difficulty": row.get("difficulty", None),
-        "text": text,
+        "prompt": prompt,   # system+user only — for inference
+        "text": text,       # full chat incl. gold answer — for training
     }
 
 

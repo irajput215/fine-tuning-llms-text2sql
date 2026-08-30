@@ -178,6 +178,9 @@ uv run python -c "import torch, transformers, peft; print('stack OK')"
 
 - [x] `data_prep/SCOPE.md` — the one-paragraph scope decision
 - [x] Spider → S3 staging script + loader (validated on real data)
+- [x] SQLite databases fetched (206MB, official zip) + eval harness built
+      (`eval/run_eval.py`: execution + exact-match, stratified, gold-mode
+      validated at 100%, negative-tested on wrong SQL)
 - [ ] Spider → S3 staging script + loader
 - [ ] Baseline run (zero-shot + few-shot) → X%
 - [ ] QLoRA training with val checkpointing
