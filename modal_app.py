@@ -39,19 +39,26 @@ IMAGE_DEPS = [
 image = modal.Image.debian_slim(python_version="3.12").pip_install(IMAGE_DEPS)
 app = modal.App("llama33-text2sql", image=image)
 volume = modal.Volume.from_name("llama33-runs", create_if_missing=True)
+repo_volume = modal.Volume.from_name("llama33-repo", create_if_missing=True)
 SECRET = modal.Secret.from_name("huggingface-secret")  # HF_TOKEN key
 
 COMMON = dict(
     image=image,
-    volumes={"/runs": volume},
+    volumes={"/runs": volume, "/repo": repo_volume},
     secrets=[SECRET],
     retries=0,
 )
 
 
 def _repo_setup() -> None:
-    os.chdir("/root")
-    sys.path.insert(0, "/root")
+    # The repo rides on the llama33-repo volume (include_source only mounts
+    # this app file in 1.5.5):
+    #   modal volume put llama33-repo training /repo/training
+    #   modal volume put llama33-repo eval     /repo/eval
+    #   modal volume put llama33-repo data_prep /repo/data_prep
+    #   modal volume put llama33-repo data     /repo/data
+    os.chdir("/repo")
+    sys.path.insert(0, "/repo")
 
 
 @app.function(gpu="A10G", timeout=10800, **COMMON)

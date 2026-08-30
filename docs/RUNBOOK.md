@@ -29,7 +29,20 @@ uv run python data_prep/stage_spider.py --out data/processed
 uv run python data_prep/stage_spider.py --out data/processed --fetch-databases
 ```
 
-## 3. Validate the harness locally (no model, no GPU)
+## 3. Push the repo to a Modal volume (once + after each code change)
+
+Modal 1.5.5 no longer accepts `mounts=` on functions, so the repo (code +
+data) rides on a volume:
+
+```sh
+modal volume create llama33-repo      # once (errors if it already exists — fine)
+modal volume put llama33-repo training   /repo/training
+modal volume put llama33-repo eval       /repo/eval
+modal volume put llama33-repo data_prep  /repo/data_prep
+modal volume put llama33-repo data       /repo/data
+```
+
+## 4. Validate the harness locally (no model, no GPU)
 
 ```sh
 uv run python eval/run_eval.py \
@@ -39,7 +52,7 @@ uv run python eval/run_eval.py \
 # Expect: execution accuracy 100% (gold vs gold) — proves the plumbing
 ```
 
-## 4. Baseline — zero-shot
+## 5. Baseline — zero-shot
 
 ```sh
 modal run modal_app.py::run_baseline \
@@ -54,7 +67,7 @@ modal run modal_app.py::run_baseline \
     --model meta-llama/Llama-3.1-8B-Instruct
 ```
 
-## 5. Baseline — few-shot (stronger X%)
+## 6. Baseline — few-shot (stronger X%)
 
 ```sh
 modal run modal_app.py::run_baseline \
@@ -63,7 +76,7 @@ modal run modal_app.py::run_baseline \
     --model meta-llama/Llama-3.1-8B-Instruct --few-shot 2
 ```
 
-## 6. QLoRA fine-tuning
+## 7. QLoRA fine-tuning
 
 ```sh
 modal run modal_app.py::run_train \
@@ -74,7 +87,7 @@ modal run modal_app.py::run_train \
     --model meta-llama/Llama-3.1-8B-Instruct --epochs 2 --rank 32
 ```
 
-## 7. Where the outputs are
+## 8. Where the outputs are
 
 - **Baseline summaries** — `llama33-runs` Modal volume (`baseline.json`), plus
   printed on the run.
@@ -83,7 +96,7 @@ modal run modal_app.py::run_train \
 - **Local copies** — `modal volume ls llama33-runs` and
   `modal volume get llama33-runs <path>` to pull them down.
 
-## 8. Next after training
+## 9. Next after training
 
 1. **Test the best checkpoint** (touch test exactly once): run the eval
    harness with the fine-tuned adapter (post-merge: the train script's
