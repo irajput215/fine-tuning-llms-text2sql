@@ -11,13 +11,15 @@ this file; MLflow (local) can be used for interactive views (`uv run mlflow ui`)
 | baseline-fewshot-200 | test | 200 | 60.0% | 34.5% | 2 in-context examples |
 | train-run1 | train (6300) / val (700) | — | — | — | QLoRA r=16, 2 epochs, 1,576 steps |
 | eval-run1-val50 | val | 50 | 72.0% | — | checkpoint-1576 |
-| eval-run1-test200 | test | 200 | **68.0%** | — | checkpoint-1576 — the claim |
+| eval-run1-test200 | test | 200 | 68.0% | — | checkpoint-1576 |
+| **eval-run1-test1034** | test | **1,034** | **73.89%** | — | **checkpoint-1576 — the final claim** |
 
 ## Claim
 
 > Fine-tuned Llama 3.1 8B with QLoRA on Spider, improving execution accuracy
-> from **60.5%** (zero-shot baseline) to **68.0%** (fine-tuned) on the same
-> 200-example test set, via an automatic execution-based harness.
+> from **60.5%** (zero-shot baseline, n=200) to **73.89%** (fine-tuned) on
+> Spider's full 1,034-example test set, via an automatic execution-based harness.
+> (Same-sample delta on n=200: 60.5% → 68.0%.)
 
 ## train-run1 metadata
 
