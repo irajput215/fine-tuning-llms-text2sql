@@ -1,0 +1,59 @@
+# RUNS — experiment ledger
+
+Every training / evaluation run, durably recorded. JSON copies live next to
+this file; MLflow (local) can be used for interactive views (`uv run mlflow ui`).
+
+## Run table
+
+| Run | Split | n | Execution acc. | Exact match | Notes |
+|---|---|---|---|---|---|
+| baseline-zeroshot-200 | test | 200 | **60.5%** | 29.0% | base Llama 3.1 8B, greedy, zero-shot |
+| baseline-fewshot-200 | test | 200 | 60.0% | 34.5% | 2 in-context examples |
+| train-run1 | train (6300) / val (700) | — | — | — | QLoRA r=16, 2 epochs, 1,576 steps |
+| eval-run1-val50 | val | 50 | 72.0% | — | checkpoint-1576 |
+| eval-run1-test200 | test | 200 | **68.0%** | — | checkpoint-1576 — the claim |
+
+## Claim
+
+> Fine-tuned Llama 3.1 8B with QLoRA on Spider, improving execution accuracy
+> from **60.5%** (zero-shot baseline) to **68.0%** (fine-tuned) on the same
+> 200-example test set, via an automatic execution-based harness.
+
+## train-run1 metadata
+
+| Field | Value |
+|---|---|
+| Model | meta-llama/Llama-3.1-8B-Instruct |
+| Method | QLoRA (4-bit NF4, double quant) |
+| Target modules | q/k/v/o_proj |
+| rank / alpha | 16 / 32 |
+| lr / scheduler | 2e-4 / cosine (no warmup) |
+| epochs / steps | 2 / 1,576 |
+| Batch | 2 (grad accum 4 → effective 8) |
+| Max length | 2,048 |
+| Train loss (final) | 0.0255 |
+| Runtime | 8,421 s (~2h20m) |
+| GPU | Modal A10G |
+| Est. cost | ~$1.40 |
+| Modal app | `ap-yMFbGnoyfYD8W6sbDIRmxD` |
+| Checkpoints | volume `llama33-runs/checkpoints/run1/` (500/1000/1500/1576) |
+| Selection | pending best-by-val-exec re-run (loop fixed; final-step checkpoint scored here) |
+
+## How to reproduce
+
+```sh
+modal run modal_app.py::run_train --model meta-llama/Llama-3.1-8B-Instruct --epochs 2 --rank 16
+modal run modal_app.py::eval_checkpoint \
+    --model meta-llama/Llama-3.1-8B-Instruct \
+    --checkpoint-dir /runs/checkpoints/run1/checkpoint-1576 \
+    --max-rows 200 --split test
+```
+
+## Storage tools
+
+- **This ledger + JSON files** — durable, git-tracked, portable (interview-ready).
+- **MLflow** — declared in the stack; run the UI locally with `uv run mlflow ui`
+  (tracking URI `./mlruns`, gitignored) or point it at a server/volume for
+  cloud-shared runs.
+- **Modal volume** — raw artifacts (checkpoints, eval JSONs) live on
+  `llama33-runs`; `modal volume get` to pull.

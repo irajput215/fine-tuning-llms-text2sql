@@ -1,0 +1,15 @@
+{
+ "label": "baseline meta-llama/Llama-3.1-8B-Instruct zero-shot",
+ "n": 200,
+ "exec_accuracy": 0.605,
+ "exact_match": 0.29,
+ "by_difficulty": {
+  "unknown": 0.605
+ },
+ "by_feature": {
+  "aggregation": 0.6897,
+  "subquery": 0.3714,
+  "join": 0.4583,
+  "set-operation": 0.5333
+ }
+}
