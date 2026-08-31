@@ -7,7 +7,8 @@ this file; MLflow (local) can be used for interactive views (`uv run mlflow ui`)
 
 | Run | Split | n | Execution acc. | Exact match | Notes |
 |---|---|---|---|---|---|
-| baseline-zeroshot-200 | test | 200 | **60.5%** | 29.0% | base Llama 3.1 8B, greedy, zero-shot |
+| baseline-zeroshot-200 | test | 200 | 60.5% | 29.0% | base Llama 3.1 8B, greedy, zero-shot |
+| **baseline-zeroshot-1034** | test | **1,034** | **67.89%** | 32.5% | full test set — the same-sample baseline |
 | baseline-fewshot-200 | test | 200 | 60.0% | 34.5% | 2 in-context examples |
 | train-run1 | train (6300) / val (700) | — | — | — | QLoRA r=16, 2 epochs, 1,576 steps |
 | eval-run1-val50 | val | 50 | 72.0% | — | checkpoint-1576 |
@@ -17,9 +18,9 @@ this file; MLflow (local) can be used for interactive views (`uv run mlflow ui`)
 ## Claim
 
 > Fine-tuned Llama 3.1 8B with QLoRA on Spider, improving execution accuracy
-> from **60.5%** (zero-shot baseline, n=200) to **73.89%** (fine-tuned) on
-> Spider's full 1,034-example test set, via an automatic execution-based harness.
-> (Same-sample delta on n=200: 60.5% → 68.0%.)
+> from **67.89%** (zero-shot baseline) to **73.89%** (fine-tuned) on the
+> identical 1,034-example test set (+6.0 points), via an automatic
+> execution-based harness. (n=200: 60.5% → 68.0%.)
 
 ## train-run1 metadata
 
@@ -50,6 +51,12 @@ modal run modal_app.py::eval_checkpoint \
     --checkpoint-dir /runs/checkpoints/run1/checkpoint-1576 \
     --max-rows 200 --split test
 ```
+
+## Ablation note (decision D9)
+
+A rank-32 QLoRA run (run2) was launched but de-scoped by decision: the run1
+claim (67.89% → 73.89%) stands as the project's result. run2's checkpoints
+remain on the volume (`checkpoints/run2`) but are not part of the write-up.
 
 ## Storage tools
 

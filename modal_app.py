@@ -82,6 +82,7 @@ def run_baseline(model: str, max_examples: int = 0, few_shot: int = 0,
         Path("data/spider/spider_data/database"),
         Path("data/processed/train.jsonl"),
         max_examples, few_shot,
+        rows_out=Path(f"/runs/{out_name.replace('.json','')}.rows.json"),
     )
     with open(f"/runs/{out_name}", "w") as fh:
         fh.write(json.dumps(summary, indent=1))
@@ -144,9 +145,10 @@ def eval_checkpoint(model: str, checkpoint_dir: str, max_rows: int = 100,
 
     import json
     rows = [json.loads(l) for l in open(f"data/processed/{split}.jsonl")]
-    acc = evaluate_checkpoint(
+    acc, _rows = evaluate_checkpoint(
         ft, tokenizer, rows, Path("data/spider/spider_data/database"),
-        0, max_rows=max_rows)
+        0, max_rows=max_rows, collect_rows=True,
+        rows_out=Path(f"/runs/eval-{Path(checkpoint_dir).name}-{split}.rows.json"))
     result = {"checkpoint": checkpoint_dir, "split": split, "n": max_rows,
               "exec_accuracy": round(acc, 4)}
     with open(f"/runs/eval-{Path(checkpoint_dir).name}.json", "w") as fh:

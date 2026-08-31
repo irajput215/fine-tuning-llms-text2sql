@@ -22,7 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from eval.run_eval import (  # noqa: E402
-    execute_sql, execution_accuracy,
+    execute_sql, execution_accuracy, exact_match, classify_features,
 )
 from training.run_baseline import build_prompt, generate  # noqa: E402
 
@@ -61,19 +61,38 @@ class CompletionOnlyCollator:
 
 
 def evaluate_checkpoint(model, tokenizer, val_rows, db_dir, few_shot,
-                        max_rows: int = 100) -> float:
-    """Execution accuracy on a val sample (prompts built from staged rows)."""
+                        max_rows: int = 100, rows_out: Path | None = None,
+                        collect_rows: bool = False):
+    """Execution accuracy on a sample; optionally collect per-row results."""
+    import json
+
     sample = val_rows[:max_rows]
     correct = 0
+    rows = []
     for row in sample:
         prompt = build_prompt(row, few_shot, [])
         pred = generate("transformers", ("transformers", model, tokenizer), prompt)
         db = db_dir / row["db_id"] / f"{row['db_id']}.sqlite"
-        gold_rows, _ = execute_sql(db, row["query"])
-        pred_rows, _ = execute_sql(db, pred)
+        gold_rows, gold_err = execute_sql(db, row["query"])
+        pred_rows, pred_err = execute_sql(db, pred)
         acc, ok = execution_accuracy(gold_rows, pred_rows)
         correct += int(acc == 1.0 and ok)
-    return correct / len(sample)
+        if collect_rows:
+            rows.append({
+                "db_id": row["db_id"], "question": row["question"],
+                "difficulty": row.get("difficulty"),
+                "features": classify_features(row["query"]),
+                "gold": row["query"], "pred": pred,
+                "gold_error": gold_err, "pred_error": pred_err,
+                "exec": acc, "exact": exact_match(row["query"], pred),
+                "both_executed": gold_rows is not None and pred_rows is not None,
+            })
+    acc = correct / len(sample)
+    if rows_out is not None:
+        rows_out.parent.mkdir(parents=True, exist_ok=True)
+        rows_out.write_text(json.dumps(rows, indent=1))
+        print(f"wrote {len(rows)} per-row results -> {rows_out}")
+    return acc, rows if collect_rows else acc
 
 
 def train_qlora(model_id: str, train_path: Path, val_path: Path, db_dir: Path,
