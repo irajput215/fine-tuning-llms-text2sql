@@ -67,7 +67,7 @@ def evaluate_checkpoint(model, tokenizer, val_rows, db_dir, few_shot,
     correct = 0
     for row in sample:
         prompt = build_prompt(row, few_shot, [])
-        pred = generate("transformers", (model, tokenizer), prompt)
+        pred = generate("transformers", ("transformers", model, tokenizer), prompt)
         db = db_dir / row["db_id"] / f"{row['db_id']}.sqlite"
         gold_rows, _ = execute_sql(db, row["query"])
         pred_rows, _ = execute_sql(db, pred)
