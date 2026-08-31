@@ -103,3 +103,17 @@ Timeline in [development-log.md](development-log.md).
   and doubles as the outputs store; function-ref CLI is the documented
   interface. The SDK moves fast — the installed package source, not the docs,
   is the source of truth (see PROBLEMS.md's closing lesson).
+
+## D9 · Claim fixed on run1; rank-32 ablation de-scoped
+
+- **Date:** 2026-08-31
+- **Context:** A rank-32 ablation (run2) was launched; the captain decided the
+  run1 result (73.89%) is sufficient and defensible for the resume — a second
+  config would add compute spend without changing the story.
+- **Decision:** the claim stays on run1 (67.89% → 73.89%, +6.0). run2's
+  checkpoints exist on the volume (the run completed before the decision) but
+  are out of scope for the write-up; they remain available if an ablation data
+  point is ever wanted.
+- **Why:** a single, clean, explainable delta beats an un-analyzed second data
+  point; the explanation for "why better than baseline" (fine-tuned task
+  adaptation vs generic prompting) is stronger than "rank 32 gave +0.5".

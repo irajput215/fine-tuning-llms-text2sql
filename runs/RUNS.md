@@ -52,6 +52,12 @@ modal run modal_app.py::eval_checkpoint \
     --max-rows 200 --split test
 ```
 
+## Ablation note (decision D9)
+
+A rank-32 QLoRA run (run2) was launched but de-scoped by decision: the run1
+claim (67.89% → 73.89%) stands as the project's result. run2's checkpoints
+remain on the volume (`checkpoints/run2`) but are not part of the write-up.
+
 ## Storage tools
 
 - **This ledger + JSON files** — durable, git-tracked, portable (interview-ready).
