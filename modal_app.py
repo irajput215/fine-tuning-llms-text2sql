@@ -63,6 +63,7 @@ COMMON = dict(
 
 def _repo_setup() -> None:
     os.environ.setdefault("PYTHONDONTWRITEBYTECODE", "1")
+    os.environ.setdefault("MLFLOW_TRACKING_URI", "sqlite:////runs/mlflow.db")
     os.chdir("/repo")
     sys.path.insert(0, "/repo")
 
@@ -151,5 +152,15 @@ def eval_checkpoint(model: str, checkpoint_dir: str, max_rows: int = 100,
     with open(f"/runs/eval-{Path(checkpoint_dir).name}.json", "w") as fh:
         fh.write(json.dumps(result, indent=1))
     volume.commit()
+    try:
+        import mlflow
+        mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "file:///runs/mlruns"))
+        mlflow.set_experiment("llama33-text2sql")
+        with mlflow.start_run(run_name=f"eval-{Path(checkpoint_dir).name}-{split}"):
+            mlflow.log_params({"checkpoint": checkpoint_dir, "split": split, "n": max_rows,
+                               "model": model})
+            mlflow.log_metric("exec_accuracy", round(acc, 4))
+    except Exception as exc:  # noqa: BLE001
+        print(f"MLflow logging skipped: {exc}")
     print(f"FINE-TUNED {split} exec (n={max_rows}): {acc:.2%}")
     return result

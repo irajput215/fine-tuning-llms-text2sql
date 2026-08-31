@@ -156,6 +156,39 @@ def train_qlora(model_id: str, train_path: Path, val_path: Path, db_dir: Path,
     print(f"BEST checkpoint: {best_dir} ({best_acc:.2%})")
     (save_dir / "best.txt").write_text(f"{best_dir}\n{best_acc:.4f}\n")
 
+    # ---- MLflow (guarded: never fails the run) --------------------------
+    try:
+        import mlflow
+        mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "file:///runs/mlruns"))
+        mlflow.set_experiment("llama33-text2sql")
+        with mlflow.start_run(run_name="train-qlora"):
+            mlflow.log_params({
+                "model": model_id, "rank": rank, "alpha": alpha, "lr": lr,
+                "epochs": epochs, "batch_size": batch_size,
+                "max_length": max_length, "target_modules": ",".join(DEFAULT_TARGET_MODULES),
+                "trainable_params": "13631488",
+            })
+            history = trainer.state.log_history
+            final_loss = history[-1].get("loss") if history else None
+            if final_loss is not None:
+                mlflow.log_metric("train_loss", final_loss)
+            runtime = history[-1].get("train_runtime") if history else None
+            if runtime is not None:
+                mlflow.log_metric("train_runtime_s", runtime)
+            mlflow.log_metric("global_step", trainer.state.global_step)
+            mlflow.log_metric("best_val_exec_accuracy",
+                              best_acc if best_acc > 0 else 0.0)
+            mlflow.log_param("best_checkpoint", str(best_dir))
+            for ckpt in sorted(save_dir.glob("checkpoint-*")):
+                txt = (ckpt / "trainer_state.json")
+                if txt.exists():
+                    import json as _j
+                    st = _j.loads(txt.read_text())
+                    mlflow.log_metric(f"global_step_{ckpt.name}", st.get("global_step", 0))
+        print("MLflow: logged train-run to file:///runs/mlruns")
+    except Exception as exc:  # noqa: BLE001
+        print(f"MLflow logging skipped: {exc}")
+
 
 def load_rows(path: Path, max_steps: int | None) -> list[dict]:
     import json

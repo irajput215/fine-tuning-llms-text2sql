@@ -133,7 +133,19 @@ def run_baseline(model_id: str, test_path: Path, db_dir: Path, train_path: Path,
             acc = sum(r["exec"] for r in results) / len(results)
             print(f"  {i+1}/{len(test_rows)} exec={acc:.2%}", file=sys.stderr)
     label = f"baseline {model_id}" + (f" few-shot={few_shot}" if few_shot else " zero-shot")
-    return summarize(results, label)
+    summary = summarize(results, label)
+    try:
+        import mlflow
+        mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "file:///runs/mlruns"))
+        mlflow.set_experiment("llama33-text2sql")
+        with mlflow.start_run(run_name=f"baseline-{few_shot or 'zero'}-shot"):
+            mlflow.log_params({"model": model_id, "few_shot": few_shot, "n": summary["n"]})
+            mlflow.log_metrics({"exec_accuracy": summary["exec_accuracy"],
+                                "exact_match": summary["exact_match"],
+                                **{f"exec_{k}": v for k, v in summary["by_feature"].items()}})
+    except Exception as exc:  # noqa: BLE001
+        print(f"MLflow logging skipped: {exc}")
+    return summary
 
 
 def main() -> None:
