@@ -1,0 +1,6 @@
+{
+ "checkpoint": "/runs/checkpoints/run1/checkpoint-1576",
+ "split": "test",
+ "n": 200,
+ "exec_accuracy": 0.68
+}

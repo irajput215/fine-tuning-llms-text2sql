@@ -68,3 +68,29 @@ file (P5e), plus the secret-name mismatch (P6) and the vLLM KV-cache OOM
 (P7). All documented in `docs/PROBLEMS.md` with fixes + evidence. State: the
 baseline run reaches generation after the max_model_len cap; volume-based
 repo mount works end to end.
+
+### 08 · First baseline captured — the X%
+Modal run `baseline-zeroshot-200` succeeded end to end (after the P7/P9 fixes):
+**zero-shot Llama 3.1 8B → 60.5% execution accuracy** (n=200, greedy),
+29.0% exact match. Feature stratification: aggregation 68.97%, set-op 53.33%,
+join 45.83%, subquery 37.14%. Difficulty labels pending (HF rows carry none;
+official dev.json via --difficulty-json). Summary saved to the volume and
+copied to `analysis/baseline-zeroshot-200.json`. Documented in
+`docs/RESULTS.md`.
+
+### 09 · Few-shot baseline — flat exec, better exact-match
+Ran `baseline-fewshot-200` (2 in-context examples): **execution accuracy
+60.0%** (vs 60.5% zero-shot — noise), **exact match 34.5%** (vs 29.0% — up
+5.5). Per-feature: subquery +2.9, join −6.3, aggregation −4.3, set-op flat.
+Interpretation: 2 shots change SQL *style* (better string match) but not
+*correctness*; fine-tuning, not prompting, is the expected lever. Summaries
+saved to the volume + `analysis/`. RESULTS.md updated with the comparison.
+
+### 10 · Fine-tuning SUCCESS — the claim
+QLoRA run1 (r=16, 2 epochs, 1576 steps, 2h23m, A10G) converged (train loss
+0.0255) and saved checkpoints 500/1000/1500/1576 to the volume. The
+checkpoint-selection eval crashed ("expected 3, got 2" — generate() needs the
+3-tuple, evaluate_checkpoint passed a 2-tuple; fixed + full tracebacks in the
+catch). Added `eval_checkpoint` modal fn (4-bit base + PeftModel, split option).
+Results: **fine-tuned test exec 68.0% (n=200) vs zero-shot baseline 60.5% —
++7.5 pts on the same test set.** Val n=50: 72.0%.

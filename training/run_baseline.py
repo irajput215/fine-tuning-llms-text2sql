@@ -63,6 +63,10 @@ def build_prompt(row: dict, few_shot: int, shot_rows: list[dict]) -> str:
 def load_generator(model_id: str, quantize_4bit: bool):
     """vLLM first, transformers fallback."""
     os.environ.setdefault("HF_TOKEN", "")
+    # vLLM 0.28 defaults to FlashInfer sampling, which JIT-compiles a CUDA
+    # kernel at runtime and needs nvcc (absent in this image). Use the native
+    # sampler instead (same results, no toolkit needed).
+    os.environ.setdefault("VLLM_USE_FLASHINFER_SAMPLER", "0")
     try:
         from vllm import LLM, SamplingParams
         # max_model_len must be capped: vLLM sizes the KV cache off the model's
@@ -70,8 +74,7 @@ def load_generator(model_id: str, quantize_4bit: bool):
         # Our prompts are ~2-4k tokens; 8192 leaves headroom for schema + SQL.
         llm = LLM(model=model_id, tokenizer=model_id, dtype="bfloat16",
                   max_model_len=8192)
-        sp = SamplingParams(temperature=0, max_tokens=300, stop=["<|eot_id|>"],
-                            add_special_tokens=False)
+        sp = SamplingParams(temperature=0, max_tokens=300, stop=["<|eot_id|>"])
         return ("vllm", llm, sp)
     except ImportError:
         import torch
@@ -130,7 +133,19 @@ def run_baseline(model_id: str, test_path: Path, db_dir: Path, train_path: Path,
             acc = sum(r["exec"] for r in results) / len(results)
             print(f"  {i+1}/{len(test_rows)} exec={acc:.2%}", file=sys.stderr)
     label = f"baseline {model_id}" + (f" few-shot={few_shot}" if few_shot else " zero-shot")
-    return summarize(results, label)
+    summary = summarize(results, label)
+    try:
+        import mlflow
+        mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "file:///runs/mlruns"))
+        mlflow.set_experiment("llama33-text2sql")
+        with mlflow.start_run(run_name=f"baseline-{few_shot or 'zero'}-shot"):
+            mlflow.log_params({"model": model_id, "few_shot": few_shot, "n": summary["n"]})
+            mlflow.log_metrics({"exec_accuracy": summary["exec_accuracy"],
+                                "exact_match": summary["exact_match"],
+                                **{f"exec_{k}": v for k, v in summary["by_feature"].items()}})
+    except Exception as exc:  # noqa: BLE001
+        print(f"MLflow logging skipped: {exc}")
+    return summary
 
 
 def main() -> None:

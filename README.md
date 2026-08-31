@@ -45,6 +45,8 @@ flowchart LR
 - **`docs/decisions.md`** — why every choice was made (D1–D7)
 - **`docs/RUNBOOK.md`** — exact commands from checkout to results
 - **`docs/PROBLEMS.md`** — every problem hit + root cause + fix (the debugging saga)
+- **`docs/RESULTS.md`** — baseline vs fine-tuned (60.5% → 68.0%), stratification, next steps
+- **`runs/`** — experiment ledger: every run + JSON records (the claim, reproducibly)
 
 ## Repo structure
 
