@@ -109,7 +109,7 @@ def generate(kind, gen, prompt: str) -> str:
 
 def run_baseline(model_id: str, test_path: Path, db_dir: Path, train_path: Path,
                  max_examples: int | None, few_shot: int,
-                 quantize_4bit: bool = False) -> dict:
+                 quantize_4bit: bool = False, rows_out: Path | None = None) -> dict:
     test_rows = load_rows(test_path, max_examples)
     shot_rows = load_rows(train_path, None) if few_shot else []
     gen = load_generator(model_id, quantize_4bit)
@@ -122,7 +122,8 @@ def run_baseline(model_id: str, test_path: Path, db_dir: Path, train_path: Path,
         pred_rows, pred_err = execute_sql(db_path, pred)
         exec_acc, _ = execution_accuracy(gold_rows, pred_rows)
         results.append({
-            "db_id": row["db_id"], "difficulty": row.get("difficulty"),
+            "db_id": row["db_id"], "question": row["question"],
+            "difficulty": row.get("difficulty"),
             "features": classify_features(row["query"]),
             "gold": row["query"], "pred": pred,
             "gold_error": gold_err, "pred_error": pred_err,
@@ -134,6 +135,10 @@ def run_baseline(model_id: str, test_path: Path, db_dir: Path, train_path: Path,
             print(f"  {i+1}/{len(test_rows)} exec={acc:.2%}", file=sys.stderr)
     label = f"baseline {model_id}" + (f" few-shot={few_shot}" if few_shot else " zero-shot")
     summary = summarize(results, label)
+    if rows_out is not None:
+        rows_out.parent.mkdir(parents=True, exist_ok=True)
+        rows_out.write_text(json.dumps(results, indent=1))
+        print(f"wrote {len(results)} per-row results -> {rows_out}")
     try:
         import mlflow
         mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "file:///runs/mlruns"))
