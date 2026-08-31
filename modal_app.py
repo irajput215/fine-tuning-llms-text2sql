@@ -117,7 +117,8 @@ def run_train(model: str, epochs: int = 2, rank: int = 16, lr: float = 2e-4,
 
 
 @app.function(gpu="A10G", timeout=5400, **COMMON)
-def eval_checkpoint(model: str, checkpoint_dir: str, max_rows: int = 100) -> dict:
+def eval_checkpoint(model: str, checkpoint_dir: str, max_rows: int = 100,
+                 split: str = "val") -> dict:
     """Score a fine-tuned checkpoint on the val set (execution accuracy)."""
     _repo_setup()
     import torch
@@ -141,14 +142,14 @@ def eval_checkpoint(model: str, checkpoint_dir: str, max_rows: int = 100) -> dic
     ft.eval()
 
     import json
-    val_rows = [json.loads(l) for l in open("data/processed/val.jsonl")]
+    rows = [json.loads(l) for l in open(f"data/processed/{split}.jsonl")]
     acc = evaluate_checkpoint(
-        ft, tokenizer, val_rows, Path("data/spider/spider_data/database"),
+        ft, tokenizer, rows, Path("data/spider/spider_data/database"),
         0, max_rows=max_rows)
-    result = {"checkpoint": checkpoint_dir, "n": max_rows,
-              "val_exec_accuracy": round(acc, 4)}
+    result = {"checkpoint": checkpoint_dir, "split": split, "n": max_rows,
+              "exec_accuracy": round(acc, 4)}
     with open(f"/runs/eval-{Path(checkpoint_dir).name}.json", "w") as fh:
         fh.write(json.dumps(result, indent=1))
     volume.commit()
-    print(f"FINE-TUNED val exec (n={max_rows}): {acc:.2%}")
+    print(f"FINE-TUNED {split} exec (n={max_rows}): {acc:.2%}")
     return result
