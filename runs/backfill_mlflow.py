@@ -22,6 +22,7 @@ mlflow.set_experiment("llama33-text2sql")
 RECORDS = {
     "baseline-zeroshot-200.json": ("baseline-zero-shot", "baseline"),
     "baseline-fewshot-200.json": ("baseline-few-shot", "baseline"),
+    "baseline-zeroshot-1034.json": ("baseline-zero-shot-1034", "baseline"),
     "eval-run1-val50.json": ("eval-run1-val50", "eval"),
     "eval-run1-test200.json": ("eval-run1-test200", "eval"),
     "eval-run1-test1034.json": ("eval-run1-test1034", "eval"),

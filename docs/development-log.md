@@ -102,3 +102,10 @@ eval-checkpoint-1576 on the complete 1,034-example test set:
 created the volume's mlflow.db + experiment (verified — now pullable for local
 UI browsing). Ledger + RESULTS.md updated. Remaining for a same-sample delta:
 full-set zero-shot baseline run (vLLM).
+
+
+### 12 · Full-set zero-shot baseline — the airtight delta
+Zero-shot baseline on the full 1,034 test set (vLLM): **67.89%** exec (exact
+32.5%). Same-sample full-set claim: **67.89% → 73.89% (+6.0 points)**.
+By-feature: aggregation 69.4%, join 59.1%, set-op 43.8%, subquery 43.4%.
+Saved to runs/baseline-zeroshot-1034.json; ledger + RESULTS.md updated.
