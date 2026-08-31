@@ -52,8 +52,10 @@ modal run modal_app.py::eval_checkpoint \
 ## Storage tools
 
 - **This ledger + JSON files** — durable, git-tracked, portable (interview-ready).
-- **MLflow** — declared in the stack; run the UI locally with `uv run mlflow ui`
-  (tracking URI `./mlruns`, gitignored) or point it at a server/volume for
-  cloud-shared runs.
+- **MLflow** — sqlite store (`mlruns/mlflow.db`, gitignored); browse with
+  `uv run mlflow ui --backend-store-uri sqlite:///mlruns/mlflow.db`. Container
+  runs log to the Modal volume (`sqlite:////runs/mlflow.db`) — pull with
+  `modal volume get llama33-runs mlflow.db ./mlruns/mlflow.db` **after the next
+  run creates it**.
 - **Modal volume** — raw artifacts (checkpoints, eval JSONs) live on
   `llama33-runs`; `modal volume get` to pull.
