@@ -29,15 +29,15 @@ test set, and is recorded in the experiment ledger (`runs/`) and MLflow.
 
 ### Per-feature execution accuracy (fine-tuned vs zero-shot)
 
-| Feature | Zero-shot | Fine-tuned |
-|---|---|---|
-| Aggregation | 69.4% | — |
-| Join | 59.1% | — |
-| Subquery | 43.4% | — |
-| Set-operation | 43.8% | — |
+| Feature | Zero-shot | Fine-tuned | Δ |
+|---|---|---|---|
+| Aggregation | 69.4% | 74.8% | **+5.4** |
+| Join | 59.1% | 62.3% | **+3.2** |
+| Subquery | 43.4% | 55.4% | **+12.0** |
+| Set-operation | 43.8% | 56.3% | **+12.5** |
 
-*(Per-feature fine-tuned numbers pending a stratification pass — feature
-labels are computed from the gold SQL in every eval row.)*
+*(Computed from the per-row results on the full 1,034 test set; rows can carry
+multiple feature labels.)*
 
 ### Error analysis (fine-tuned, 270/1,034 failures = 26.1%)
 
