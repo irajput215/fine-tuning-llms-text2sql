@@ -99,7 +99,7 @@ def train_qlora(model_id: str, train_path: Path, val_path: Path, db_dir: Path,
         bnb_4bit_use_double_quant=True, bnb_4bit_compute_dtype=torch.bfloat16)
     model = AutoModelForCausalLM.from_pretrained(
         model_id, quantization_config=bnb,
-        torch_dtype=torch.bfloat16, device_map="auto", token=True)
+        dtype=torch.bfloat16, device_map="auto", token=True)
     model.config.use_cache = False  # required with gradient checkpointing
 
     lora = LoraConfig(
@@ -145,8 +145,10 @@ def train_qlora(model_id: str, train_path: Path, val_path: Path, db_dir: Path,
             eval_model.eval()
             acc = evaluate_checkpoint(eval_model, tokenizer, val_rows, db_dir,
                                       few_shot)
-        except Exception as exc:  # noqa: BLE001
-            print(f"checkpoint {ckpt.name} eval failed: {exc}")
+        except Exception:  # noqa: BLE001
+            import traceback
+            print(f"checkpoint {ckpt.name} eval failed:")
+            traceback.print_exc()
             continue
         print(f"checkpoint {ckpt.name}: val exec={acc:.2%}")
         if acc > best_acc:
@@ -159,7 +161,7 @@ def load_rows(path: Path, max_steps: int | None) -> list[dict]:
     import json
 
     rows = [json.loads(l) for l in open(path)]
-    return rows[: max_steps] if max_steps else rows
+    return rows[:max_steps] if max_steps else rows
 
 
 def main() -> None:

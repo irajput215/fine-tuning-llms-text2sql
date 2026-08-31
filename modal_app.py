@@ -114,3 +114,41 @@ def run_train(model: str, epochs: int = 2, rank: int = 16, lr: float = 2e-4,
     volume.commit()
     best = (save_dir / "best.txt").read_text() if (save_dir / "best.txt").exists() else "?"
     return {"best": best, "checkpoints": str(save_dir)}
+
+
+@app.function(gpu="A10G", timeout=5400, **COMMON)
+def eval_checkpoint(model: str, checkpoint_dir: str, max_rows: int = 100) -> dict:
+    """Score a fine-tuned checkpoint on the val set (execution accuracy)."""
+    _repo_setup()
+    import torch
+    from pathlib import Path as _P
+
+    from transformers import (
+        AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig)
+    from peft import PeftModel
+    from training.train_qlora import evaluate_checkpoint
+
+    tokenizer = AutoTokenizer.from_pretrained(model, token=True)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    bnb = BitsAndBytesConfig(
+        load_in_4bit=True, bnb_4bit_quant_type="nf4",
+        bnb_4bit_use_double_quant=True, bnb_4bit_compute_dtype=torch.bfloat16)
+    base = AutoModelForCausalLM.from_pretrained(
+        model, quantization_config=bnb,
+        torch_dtype=torch.bfloat16, device_map="auto", token=True)
+    ft = PeftModel.from_pretrained(base, checkpoint_dir)
+    ft.eval()
+
+    import json
+    val_rows = [json.loads(l) for l in open("data/processed/val.jsonl")]
+    acc = evaluate_checkpoint(
+        ft, tokenizer, val_rows, Path("data/spider/spider_data/database"),
+        0, max_rows=max_rows)
+    result = {"checkpoint": checkpoint_dir, "n": max_rows,
+              "val_exec_accuracy": round(acc, 4)}
+    with open(f"/runs/eval-{Path(checkpoint_dir).name}.json", "w") as fh:
+        fh.write(json.dumps(result, indent=1))
+    volume.commit()
+    print(f"FINE-TUNED val exec (n={max_rows}): {acc:.2%}")
+    return result
