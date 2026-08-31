@@ -136,3 +136,40 @@ truth, and each fix was found there in minutes.
   returns False and falls back to the native sampler when the var is 0).
 - **Evidence:** the env var name confirmed in the installed release's source,
   not docs (the recurring lesson again).
+
+## P10 · TRL removed DataCollatorForCompletionOnlyLM
+
+- **Symptom:** `ImportError: cannot import name 'DataCollatorForCompletionOnlyLM' from 'trl'`.
+- **Root cause:** recent TRL dropped the collator entirely (verified: absent
+  from the package source).
+- **Fix:** plain `transformers.Trainer` + a ~20-line custom completion-masking
+  collator (labels = -100 before the assistant marker) — dependency-free.
+
+## P11 · max_steps semantics changed (0 stops after one step)
+
+- **Symptom:** training ran exactly 1 step (`train_runtime: 6.889s`), then
+  checkpoint selection; `max_steps=None` caused a `'>' NoneType` TypeError.
+- **Root cause:** the new transformers rejects `None` and treats `0` as
+  stop-immediately.
+- **Fix:** `max_steps=-1` (the classic "run to epochs" sentinel) — full
+  1,576-step run.
+
+## P12 · generate() tuple shape (the checkpoint-eval crash)
+
+- **Symptom:** every checkpoint eval failed with `not enough values to unpack
+  (expected 3, got 2)` → `best.txt` empty.
+- **Root cause:** `generate(kind, gen, ...)` expects the 3-tuple
+  `(kind, model, tokenizer)` returned by `load_generator`; `evaluate_checkpoint`
+  passed a 2-tuple.
+- **Fix:** pass the full 3-tuple; added `eval_checkpoint` modal fn with split
+  option + full tracebacks in the selection catch.
+
+## P13 · Modal volume served stale code (snapshot semantics)
+
+- **Symptom:** container executed old `train_qlora.py` (verified via a
+  sha256 fingerprint) even after the volume `get` showed the new file.
+- **Root cause:** Modal volume reads use snapshot semantics; put-then-immediate-
+  run can serve the older snapshot.
+- **Fix (architecture):** bake code + data into the **image**
+  (`Image.add_local_dir(..., copy=True)`) — immutable per deploy; the volume
+  holds only outputs/checkpoints.

@@ -95,6 +95,24 @@ modal run modal_app.py::run_baseline \
 
 Results land in `llama33-runs` volume (`baseline.json`) and print in the run.
 
+## THE CLAIM — fine-tuned vs baseline (same test set, n=200)
+
+| Model | Test execution accuracy | Δ |
+|---|---|---|
+| Llama 3.1 8B zero-shot (baseline) | **60.5%** | — |
+| Llama 3.1 8B few-shot (2) | 60.0% | −0.5 |
+| **+ QLoRA fine-tuning** (r=16, 2 epochs, checkpoint-1576) | **68.0%** | **+7.5** |
+
+**Headline:** fine-tuning with QLoRA improved Spider execution accuracy from
+60.5% to 68.0% on the same 200-example test set — and the harness that proved
+it is automatic and reproducible. (Val sample n=50: 72.0% — consistent
+direction; the test number is the claim.)
+
+**Caveats (honest):** n=200 sample, not the full 1,034; one seed/checkpoint
+(final step, not yet the val-exec-selected best — the selection loop is fixed
+and will pick the best of 500/1000/1500/1576 on a full re-run); training loss
+converged (0.0255) but loss ≠ exec accuracy.
+
 ## Next steps
 
 - [ ] Few-shot baseline (2–3 shots) → compare against 60.5%

@@ -85,3 +85,12 @@ Ran `baseline-fewshot-200` (2 in-context examples): **execution accuracy
 Interpretation: 2 shots change SQL *style* (better string match) but not
 *correctness*; fine-tuning, not prompting, is the expected lever. Summaries
 saved to the volume + `analysis/`. RESULTS.md updated with the comparison.
+
+### 10 · Fine-tuning SUCCESS — the claim
+QLoRA run1 (r=16, 2 epochs, 1576 steps, 2h23m, A10G) converged (train loss
+0.0255) and saved checkpoints 500/1000/1500/1576 to the volume. The
+checkpoint-selection eval crashed ("expected 3, got 2" — generate() needs the
+3-tuple, evaluate_checkpoint passed a 2-tuple; fixed + full tracebacks in the
+catch). Added `eval_checkpoint` modal fn (4-bit base + PeftModel, split option).
+Results: **fine-tuned test exec 68.0% (n=200) vs zero-shot baseline 60.5% —
++7.5 pts on the same test set.** Val n=50: 72.0%.
