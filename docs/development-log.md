@@ -94,3 +94,11 @@ checkpoint-selection eval crashed ("expected 3, got 2" — generate() needs the
 catch). Added `eval_checkpoint` modal fn (4-bit base + PeftModel, split option).
 Results: **fine-tuned test exec 68.0% (n=200) vs zero-shot baseline 60.5% —
 +7.5 pts on the same test set.** Val n=50: 72.0%.
+
+
+### 11 · FULL test set — the final claim
+eval-checkpoint-1576 on the complete 1,034-example test set:
+**execution accuracy 73.89%** (34 min, ~$0.35). Container MLflow auto-logging
+created the volume's mlflow.db + experiment (verified — now pullable for local
+UI browsing). Ledger + RESULTS.md updated. Remaining for a same-sample delta:
+full-set zero-shot baseline run (vLLM).
