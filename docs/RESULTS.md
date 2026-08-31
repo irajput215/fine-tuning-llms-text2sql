@@ -95,6 +95,18 @@ modal run modal_app.py::run_baseline \
 
 Results land in `llama33-runs` volume (`baseline.json`) and print in the run.
 
+## Fine-tuned per-feature (full 1,034, from per-row results)
+
+| Feature | Zero-shot | Fine-tuned | Δ |
+|---|---|---|---|
+| Aggregation | 69.4% | 74.8% | +5.4 |
+| Join | 59.1% | 62.3% | +3.2 |
+| Subquery | 43.4% | 55.4% | **+12.0** |
+| Set-operation | 43.8% | 56.3% | **+12.5** |
+
+Fine-tuning helped everywhere, most on the hardest categories (subqueries,
+set-ops) — consistent with "it learned structure, not just format".
+
 ## THE CLAIM — fine-tuned vs baseline (same test set, n=200)
 
 | Model | Test execution accuracy | Δ |
